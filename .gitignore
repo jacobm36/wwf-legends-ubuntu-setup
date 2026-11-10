@@ -1,0 +1,24 @@
+# Game and mod files are supplied by the user and must not be published here.
+/Project64/
+*.exe
+*.dll
+*.z64
+*.n64
+*.v64
+*.rom
+*.mp3
+*.fla
+*.mpk
+*.zip
+*.7z
+*.rar
+*.iso
+*.chd
+
+# Local emulator state, logs, and Python artifacts.
+*.log
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
+.vscode/
