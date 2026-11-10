@@ -103,6 +103,9 @@ python3 -m unittest discover -s tests -v
 
 ## License
 
-No license is currently included. Do not assume that GitHub visibility grants
-permission to reuse or redistribute these files. Add a license only after
-deciding what permissions you want to grant.
+The setup code and documentation in this repository are licensed under the
+[MIT License](LICENSE).
+
+This license does not apply to separately obtained game files, ROMs,
+Project64, plugins, textures, music, or other third-party assets. Those remain
+subject to their respective owners' rights and licenses.
