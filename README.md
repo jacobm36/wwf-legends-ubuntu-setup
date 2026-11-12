@@ -3,11 +3,35 @@
 Ubuntu setup guide and helper scripts for running an existing, lawfully
 obtained copy of WWF Legends - Challenge 64 with Wine and Project64.
 
-**This repository contains setup code and documentation only.** It does not
+**This repository contains setup code, documentation, and illustrative screenshots only.** It does not
 include the game, ROM, Project64, plugins, textures, cheat files, saves, or
 soundtrack. You must obtain those files separately, and only from a source
 authorized to distribute them. The soundtrack is required for the mod's
 music; it is not optional.
+
+## Screenshots
+
+These captures show the verified Ubuntu/Wine setup, not Batocera.
+
+### Borderless fullscreen
+
+The game image fills the 1920x1080 display after texture loading, with the
+emulator's menu and status bar hidden.
+
+![WWF Legends title screen in borderless fullscreen at 1920x1080](docs/screenshots/fullscreen.png)
+
+### Windowed mode
+
+Launching with `WWF_LEGENDS_WINDOWED=1` keeps the emulator menus and status
+bar available for settings and controller configuration.
+
+![WWF Legends title screen in windowed mode with Project64 menus and status bar visible](docs/screenshots/windowed.png)
+
+**Third-party rights notice:** Screenshots are included to illustrate this
+setup. Game artwork, characters, logos, trademarks, and emulator UI depicted
+belong to their respective rights holders and are not licensed under this
+repository's MIT License. Inclusion does not imply endorsement or grant
+permission to reuse the depicted third-party content.
 
 ## Getting the files
 
@@ -106,6 +130,7 @@ python3 -m unittest discover -s tests -v
 The setup code and documentation in this repository are licensed under the
 [MIT License](LICENSE).
 
-This license does not apply to separately obtained game files, ROMs,
+This license does not cover third-party content depicted in the
+[screenshots](#screenshots) or separately obtained game files, ROMs,
 Project64, plugins, textures, music, or other third-party assets. Those remain
 subject to their respective owners' rights and licenses.
