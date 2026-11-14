@@ -196,8 +196,30 @@ this setup. Before playing:
 
 ## 6. Configure a controller
 
-Open **Options > Configure Controller Plugin** in Project64. Configure a
-gamepad there if you use one. The working keyboard mapping for this setup is:
+1. Connect and turn on the controller before starting the game.
+2. Close the game if it is already running. Open a terminal and start
+   Project64 in windowed mode so its menus remain available:
+
+   ```sh
+   WWF_LEGENDS_WINDOWED=1 ~/.local/bin/wwf-legends
+   ```
+
+3. Wait for the game and texture scan to finish. In Project64, open
+   **Options > Configure Controller Plugin**.
+4. In the supplied Jabo's DirectInput plugin settings, select your controller
+   if a device list is shown, and configure controller 1 (the first N64
+   controller port). If there is an enable checkbox for that port, make sure
+   it is enabled.
+5. For each N64 control, select its mapping field and press the controller
+   button you want to use. For analog directions, select each direction and
+   move the stick in that direction when prompted. Save or accept the plugin
+   settings when finished.
+6. Start a match and test movement and buttons. If a direction is reversed or
+   a button is wrong, reopen the plugin settings and remap it.
+7. Exit Project64 with **Alt+F4**. Launch the game normally from the
+   application menu or with `~/.local/bin/wwf-legends` to return to fullscreen.
+
+The supplied keyboard mapping remains available:
 
 | N64 control | Keyboard |
 |---|---|
@@ -210,8 +232,11 @@ gamepad there if you use one. The working keyboard mapping for this setup is:
 | L / R | 1 / 2 |
 | C-up / C-down / C-left / C-right | 3 / E / W / R |
 
-If you change controller settings, use **Options > Configure Controller
-Plugin** and verify them in a match.
+If the controller does not appear in the plugin's device list, first confirm
+Ubuntu detects it in its own input or Bluetooth settings, then reconnect it
+before starting Project64 again. The DirectInput entries in the Project64
+configuration are device-specific; editing their numeric values by hand is
+not a reliable way to configure a different controller.
 
 ## 7. Launch, exit, and find logs
 
@@ -273,7 +298,9 @@ Wine DLLs, drive links, or application-menu launcher. All game files stay at
 Game-folder symlinks are rejected; supply regular files instead.
 
 Use a new output folder outside this repository and the source prefix.
-Existing Batocera game data or Ports entries are never overwritten. A
+The exporter refuses to overwrite an existing output folder; choose a different
+name if you have an older export. Existing Batocera game data or Ports entries
+are never overwritten. A
 failed copy can leave a partial export; the error identifies the paths to
 inspect. Do not delete or overwrite existing saves just to retry.
 
@@ -284,28 +311,40 @@ converting the existing prefix.
 
 ### Transfer and check on Batocera
 
-The output is an overlay with these locations:
+The output is one folder containing:
 
 ```text
-roms/ports/WWF Legends - Challenge 64.sh
-roms/ports/WWF Legends - Challenge 64.sh.keys
-system/wwf-legends/prefix/drive_c/Ch64 - Public/
-  launch-batocera.py
-  legends_runtime.py
-  Project64/
+wwf-legends-batocera-export/
+  install-batocera.py
+  runner.txt
+  prefix/drive_c/Ch64 - Public/
+    launch-batocera.py
+    legends_runtime.py
+    Project64/
 ```
 
-Copy the **contents** of the export into `/userdata` on Batocera. Through
-the network share `\\BATOCERA\share`, merge its `roms/` and `system/`
-folders into the matching shared folders; do not replace whole folders.
-Stop if `system/wwf-legends` or the matching Ports entry already exists:
-back up that installation and its saves first. Never publish the export;
-it contains your privately supplied game and media files.
+Copy the **entire** `wwf-legends-batocera-export` folder directly into
+`/userdata` on Batocera, or into the root of the network share
+`\\BATOCERA\share`. Do not replace an existing folder or Ports entry; back up
+any existing installation and saves first. Never publish the export; it
+contains your privately supplied game and media files.
 
-In Batocera's **F1 > Applications > xterm**, run:
+In Batocera's **F1 > Applications > xterm**, register the Ports entry once:
 
 ```sh
-python3 "/userdata/system/wwf-legends/prefix/drive_c/Ch64 - Public/launch-batocera.py" --check
+python3 "/userdata/wwf-legends-batocera-export/install-batocera.py"
+```
+
+The installer creates a launcher and controller shortcut in
+`/userdata/roms/ports`, pointing to the copied folder, and refuses to replace
+existing entries. If you named the export folder differently, use that name
+in the command above and in the dependency check below. Keep the folder in the
+same location after installation; the Ports launcher uses its installed path.
+
+Run the dependency check:
+
+```sh
+python3 "/userdata/wwf-legends-batocera-export/prefix/drive_c/Ch64 - Public/launch-batocera.py" --check
 ```
 
 If exported with `--runner wine-tkg`, add that same argument to the check.
@@ -328,7 +367,7 @@ chmod +x "/userdata/roms/ports/WWF Legends - Challenge 64.sh"
 ```
 
 The first launch initializes a fresh 64-bit Wine prefix in
-`/userdata/system/wwf-legends/prefix`; allow several minutes, then the
+`/userdata/wwf-legends-batocera-export/prefix`; allow several minutes, then the
 usual Project64 texture scan. The Ubuntu installation is unchanged.
 
 Configure your gamepad inside **Project64 > Options > Configure Controller
@@ -354,8 +393,8 @@ Launch errors and music warnings appear in
 `/userdata/system/logs/wwf-legends.log`, with the previous launch in
 `wwf-legends.previous.log`. Manual `--check` output appears in the terminal.
 Save data remains under
-`/userdata/system/wwf-legends/prefix/drive_c/Ch64 - Public/Project64/Save`;
-back up the entire `system/wwf-legends` folder before changing anything.
+`/userdata/wwf-legends-batocera-export/prefix/drive_c/Ch64 - Public/Project64/Save`;
+back up the entire export folder before changing anything.
 
 ## Troubleshooting
 

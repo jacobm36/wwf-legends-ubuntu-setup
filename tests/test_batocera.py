@@ -23,6 +23,7 @@ def load_script(name):
 
 
 exporter = load_script("export-batocera")
+installer = load_script("install-batocera")
 batocera = load_script("launch-batocera")
 ubuntu = load_script("launch-ubuntu")
 setup = load_script("setup-ubuntu")
@@ -58,9 +59,9 @@ class GameFixture(unittest.TestCase):
 
 
 class ExportTests(GameFixture):
-    def test_complete_overlay_preserves_assets_and_source(self):
+    def test_complete_folder_preserves_assets_and_source(self):
         original = self.config.read_bytes()
-        game, port = exporter.export(self.prefix, self.output, "wine-proton")
+        game, install_script = exporter.export(self.prefix, self.output, "wine-proton")
         self.assertEqual(game, self.output / exporter.GAME_PATH)
         self.assertEqual((game / "Project64/Config/Project64.cfg").read_bytes(), original)
         self.assertEqual((game / "Project64/Save/test.fla").read_bytes(), self.save.read_bytes())
@@ -73,18 +74,13 @@ class ExportTests(GameFixture):
         for name in ("launch-batocera.py", "legends_runtime.py"):
             self.assertEqual((game / name).read_bytes(), (REPO / name).read_bytes())
         self.assertFalse((game / "launch-ubuntu.py").exists())
-        self.assertTrue(os.access(port, os.X_OK))
-        text = port.read_text()
-        self.assertIn("'/userdata/system/wwf-legends/prefix/drive_c/Ch64 - Public/launch-batocera.py'", text)
-        self.assertNotIn(str(self.prefix), text)
-        self.assertIn("--runner wine-proton", text)
-        subprocess.run(["sh", "-n", str(port)], check=True)
-        keys = json.loads(port.with_name(port.name + ".keys").read_text())
-        self.assertEqual(keys["actions_player1"][0]["target"], ["KEY_LEFTALT", "KEY_F4"])
+        self.assertEqual(install_script.read_bytes(), (REPO / "install-batocera.py").read_bytes())
+        self.assertEqual((self.output / "runner.txt").read_text(), "wine-proton\n")
+        self.assertFalse((self.output / "roms").exists())
 
     def test_tkg_runner(self):
-        _, port = exporter.export(self.prefix, self.output, "wine-tkg")
-        self.assertIn("--runner wine-tkg", port.read_text())
+        exporter.export(self.prefix, self.output, "wine-tkg")
+        self.assertEqual((self.output / "runner.txt").read_text(), "wine-tkg\n")
 
     def test_refuses_second_export_without_modifying_saves(self):
         game, _ = exporter.export(self.prefix, self.output, "wine-proton")
@@ -132,32 +128,24 @@ class ExportTests(GameFixture):
             with self.subTest(output=output), self.assertRaises(RuntimeError):
                 exporter.export(self.prefix, output, "wine-proton")
 
-    def test_existing_ports_entry_and_broken_link_are_preserved(self):
-        port = self.output / "roms/ports" / exporter.PORT_NAME
-        port.parent.mkdir(parents=True)
-        port.write_text("existing launcher")
+    def test_broken_output_link_is_preserved(self):
+        self.output.symlink_to(self.root / "missing")
+        with self.assertRaisesRegex(RuntimeError, "symlink"):
+            exporter.export(self.prefix, self.output, "wine-proton")
+        self.assertTrue(self.output.is_symlink())
+
+    def test_existing_output_is_preserved(self):
+        self.output.mkdir()
+        (self.output / "keep").write_text("existing data")
         with self.assertRaisesRegex(RuntimeError, "Refusing to overwrite"):
             exporter.export(self.prefix, self.output, "wine-proton")
-        self.assertEqual(port.read_text(), "existing launcher")
-        port.unlink()
-        port.symlink_to(port.parent / "missing")
-        with self.assertRaises(RuntimeError):
-            exporter.export(self.prefix, self.output, "wine-proton")
-        self.assertTrue(port.is_symlink())
-        self.assertFalse((self.output / "system/wwf-legends").exists())
-
-    def test_rejects_output_parent_symlink_outside_overlay(self):
-        self.output.mkdir()
-        (self.output / "system").symlink_to(self.root)
-        with self.assertRaisesRegex(RuntimeError, "outside the output folder"):
-            exporter.export(self.prefix, self.output, "wine-proton")
-        self.assertFalse((self.root / "wwf-legends").exists())
+        self.assertEqual((self.output / "keep").read_text(), "existing data")
 
     def test_copy_failure_reports_partial_paths(self):
         with patch.object(exporter.shutil, "copytree", side_effect=OSError("disk full")):
             with self.assertRaisesRegex(RuntimeError, "Partial files may remain"):
                 exporter.export(self.prefix, self.output, "wine-proton")
-        self.assertFalse((self.output / "roms/ports" / exporter.PORT_NAME).exists())
+        self.assertFalse((self.output / "install-batocera.py").exists())
 
     def test_cli_success_and_error_codes(self):
         result = subprocess.run(
@@ -290,6 +278,58 @@ class BatoceraLaunchTests(GameFixture):
             self.assertEqual(launch.call_args.args[2], Path("/usr/wine/wine-tkg/bin/wine"))
             launch.call_args.kwargs["prepare"]()
             prepare.assert_called_once()
+
+
+class InstallerTests(GameFixture):
+    def setUp(self):
+        super().setUp()
+        self.userdata = self.root / "userdata"
+        self.output = self.userdata / "game's export"
+
+    def test_installs_ports_entry_with_copied_path_and_runner(self):
+        game, _ = exporter.export(self.prefix, self.output, "wine-tkg")
+        port = installer.install(self.output, self.userdata)
+        self.assertEqual(port, self.userdata / "roms/ports" / installer.PORT_NAME)
+        text = port.read_text()
+        self.assertIn("wine-tkg", text)
+        self.assertIn("game'\"'\"'s export", text)
+        self.assertNotIn(str(self.prefix), text)
+        self.assertTrue(os.access(port, os.X_OK))
+        subprocess.run(["sh", "-n", str(port)], check=True)
+        keys = json.loads(port.with_name(port.name + ".keys").read_text())
+        self.assertEqual(keys["actions_player1"][0]["target"], ["KEY_LEFTALT", "KEY_F4"])
+        self.assertTrue((game / "Project64/Save/test.fla").is_file())
+        with self.assertRaisesRegex(RuntimeError, "Refusing to overwrite"):
+            installer.install(self.output, self.userdata)
+        self.assertEqual(port.read_text(), text)
+
+    def test_existing_entry_or_broken_key_link_is_preserved(self):
+        exporter.export(self.prefix, self.output, "wine-proton")
+        port = self.userdata / "roms/ports" / installer.PORT_NAME
+        port.parent.mkdir(parents=True)
+        port.write_text("existing launcher")
+        with self.assertRaisesRegex(RuntimeError, "Refusing to overwrite"):
+            installer.install(self.output, self.userdata)
+        self.assertEqual(port.read_text(), "existing launcher")
+        port.unlink()
+        keys = port.with_name(port.name + ".keys")
+        keys.symlink_to(keys.parent / "missing")
+        with self.assertRaisesRegex(RuntimeError, "Refusing to overwrite"):
+            installer.install(self.output, self.userdata)
+        self.assertTrue(keys.is_symlink())
+        self.assertFalse(port.exists())
+
+    def test_rejects_wrong_location_invalid_runner_and_external_ports(self):
+        exporter.export(self.prefix, self.output, "wine-proton")
+        with self.assertRaisesRegex(RuntimeError, "directly into"):
+            installer.install(self.output, self.root)
+        (self.output / "runner.txt").write_text("bad-runner")
+        with self.assertRaisesRegex(RuntimeError, "Invalid Wine runner"):
+            installer.install(self.output, self.userdata)
+        (self.output / "runner.txt").write_text("wine-proton")
+        (self.userdata / "roms").symlink_to(self.root, target_is_directory=True)
+        with self.assertRaisesRegex(RuntimeError, "outside"):
+            installer.install(self.output, self.userdata)
 
 
 class RuntimeTests(GameFixture):

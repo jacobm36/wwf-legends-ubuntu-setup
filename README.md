@@ -78,8 +78,8 @@ After completing the Ubuntu setup, close Project64 and run:
 python3 export-batocera.py --output "$HOME/wwf-legends-batocera-export"
 ```
 
-Copy the exported `roms/` and `system/` folders into Batocera's `/userdata`
-folder, then refresh its game list. Start **WWF Legends - Challenge 64**
+Copy the entire export folder directly into Batocera's `/userdata`, then run
+its one-time installer and refresh the game list. Start **WWF Legends - Challenge 64**
 from **Ports**, not Windows. The export includes your installed Project64
 configuration, saves, textures, and required soundtrack, plus a launcher
 that runs the same native music helper. It does not copy Ubuntu's Wine
@@ -102,7 +102,8 @@ do not publish them or commit them to this repository.
 - `enable-fullscreen.py` — manages Project64's native fullscreen preference
 - `borderless.c`, `borderless.py`, `build-borderless.sh` — build and invoke
   our Wine-native borderless helper; no game code is included
-- `export-batocera.py` — exports an installed Ubuntu game as a userdata overlay
+- `export-batocera.py` — exports an installed Ubuntu game as a self-contained folder
+- `install-batocera.py` — registers the copied export in Batocera's Ports menu
 - `launch-batocera.py` — checks Batocera dependencies and launches the export
 - `legends_runtime.py` — shared emulator-memory and GStreamer soundtrack helper
 
